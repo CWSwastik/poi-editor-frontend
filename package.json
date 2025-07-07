@@ -18,7 +18,8 @@
     "react-palm": "^3.3.11",
     "react-redux": "^9.2.0",
     "redux": "^5.0.1",
-    "styled-components": "^6.1.19"
+    "styled-components": "^6.1.19",
+    "swr": "^2.3.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
