@@ -7,7 +7,6 @@ import store from "../store";
 import { addDataToMap } from "@kepler.gl/actions";
 import useSwr from "swr";
 
-// ✅ Renders the actual Kepler map
 const Map: React.FC = () => (
   <div style={{ position: "absolute", width: "100%", height: "100%" }}>
     <KeplerGl
@@ -20,7 +19,6 @@ const Map: React.FC = () => (
   </div>
 );
 
-// ✅ Transforms your POI API response into Kepler-friendly format
 const transformToKeplerFormat = (data: any[]) => {
   const fields = [
     { name: "visits_avg_daily", type: "real" },
@@ -109,12 +107,11 @@ const transformToKeplerFormat = (data: any[]) => {
   return { fields, rows };
 };
 
-// ✅ Component that uses Redux + fetches + dispatches
-function MapWithData() {
+function MapWithData({ lat, lng, radius }: { lat: number; lng: number; radius: number }) {
   const dispatch = useDispatch();
 
-  const { data } = useSwr("pois", async () => {
-    const response = await fetch("http://127.0.0.1:8000/pois/nearby?lat=19&lng=-99&radius_km=20");
+  const { data } = useSwr(`pois-${lat}-${lng}-${radius}`, async () => {
+    const response = await fetch(`http://127.0.0.1:8000/pois/nearby?lat=${lat}&lng=${lng}&radius_km=${radius}`);
     return await response.json();
   });
 
@@ -143,11 +140,78 @@ function MapWithData() {
   return <Map />;
 }
 
-// ✅ Top-level: wrap everything in Redux Provider
 export default function MapWrapper() {
+  const [latStr, setLatStr] = React.useState("0");
+  const [lngStr, setLngStr] = React.useState("0");
+  const [radiusStr, setRadiusStr] = React.useState("0");
+
+  const [lat, setLat] = React.useState(0);
+  const [lng, setLng] = React.useState(0);
+  const [radius, setRadius] = React.useState(0);
+  const [submitted, setSubmitted] = React.useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const parsedLat = parseFloat(latStr);
+    const parsedLng = parseFloat(lngStr);
+    const parsedRadius = parseInt(radiusStr);
+
+    if (!isNaN(parsedLat) && !isNaN(parsedLng) && !isNaN(parsedRadius)) {
+      setLat(parsedLat);
+      setLng(parsedLng);
+      setRadius(parsedRadius);
+      setSubmitted(true);
+    }
+  };
+
   return (
     <Provider store={store}>
-      <MapWithData />
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          position: "absolute",
+          top: 13,
+          left: 1000,
+          background: "black",
+          padding: "8px",
+          borderRadius: "8px",
+          zIndex: 1000,
+        }}
+      >
+        <input
+          type="text"
+          className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
+          placeholder="Lat"
+          value={latStr}
+          onChange={(e) => setLatStr(e.target.value)}
+        />
+
+        <input
+          type="text"
+          className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
+          placeholder="Long"
+          value={lngStr}
+          onChange={(e) => setLngStr(e.target.value)}
+        />
+
+        <input
+          type="text"
+          className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
+          placeholder="Radius (km)"
+          value={radiusStr}
+          onChange={(e) => setRadiusStr(e.target.value)}
+        />
+
+        <button
+          type="submit"
+          className="px-4 py-1 bg-white text-black rounded hover:bg-blue-700"
+        >
+          Update Map
+        </button>
+      </form>
+
+      {submitted && <MapWithData lat={lat} lng={lng} radius={radius} />}
     </Provider>
   );
 }
