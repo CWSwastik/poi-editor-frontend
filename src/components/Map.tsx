@@ -123,21 +123,51 @@ function MapWithData({ lat, lng, radius }: { lat: number; lng: number; radius: n
     if (data) {
       const keplerData = transformToKeplerFormat(data);
       dispatch(
-        addDataToMap({
-          datasets: {
-            info: {
-              label: "Nearby POIs",
-              id: "pois",
+  addDataToMap({
+    datasets: {
+      info: {
+        label: "Nearby POIs",
+        id: "pois",
+      },
+      data: keplerData,
+    },
+    options: {
+      centerMap: true,
+      readOnly: false,
+    },
+    config: {
+      visState: {
+        layers: [
+          {
+            id: "pois-point-layer",
+            type: "point",
+            config: {
+              dataId: "pois",
+              label: "POIs Point Layer",
+              columns: {
+                lat: "latitude",
+                lng: "longitude",
+              },
+              isVisible: true,
+              visConfig: {
+                radius: 10,         // 🔹 Size of the points
+                opacity: 1,
+                colorRange: {
+                  name: "Custom",
+                  type: "custom",
+                  category: "Custom",
+                  colors: ["#ff6b00"],  // Highlight color
+                },
+                outline: false,
+              },
             },
-            data: keplerData,
           },
-          options: {
-            centerMap: true,
-            readOnly: false,
-          },
-          config: {},
-        })
-      );
+        ],
+      },
+    },
+  })
+);
+
     }
   }, [dispatch, data]);
 
