@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import KeplerGl from "@kepler.gl/components";
 import { Provider, useDispatch } from "react-redux";
 import store from "../store";
 import { addDataToMap } from "@kepler.gl/actions";
 import useSwr from "swr";
 import useFeatureClick from '../app/hooks/useFeatureClick';
+import POIDetails from './POIDetails'; // Add this import
 
 const Map: React.FC = () => (
   <div style={{ position: "absolute", width: "100%", height: "100%" }}>
@@ -111,8 +112,14 @@ const transformToKeplerFormat = (data: any[]) => {
 
 function MapWithData({ lat, lng, radius }: { lat: number; lng: number; radius: number }) {
   const dispatch = useDispatch();
+  const [showPOIDetails, setShowPOIDetails] = useState(false);
 
-  useFeatureClick();
+  // Initialize the feature click hook with a callback
+  const { clickedFeature } = useFeatureClick({
+    onFeatureClick: () => {
+      setShowPOIDetails(true);
+    }
+  });
 
   const { data } = useSwr(`pois-${lat}-${lng}-${radius}`, async () => {
     const response = await fetch(`http://127.0.0.1:8000/pois/nearby?lat=${lat}&lng=${lng}&radius_km=${radius}`);
@@ -123,55 +130,86 @@ function MapWithData({ lat, lng, radius }: { lat: number; lng: number; radius: n
     if (data) {
       const keplerData = transformToKeplerFormat(data);
       dispatch(
-  addDataToMap({
-    datasets: {
-      info: {
-        label: "Nearby POIs",
-        id: "pois",
-      },
-      data: keplerData,
-    },
-    options: {
-      centerMap: true,
-      readOnly: false,
-    },
-    config: {
-      visState: {
-        layers: [
-          {
-            id: "pois-point-layer",
-            type: "point",
-            config: {
-              dataId: "pois",
-              label: "POIs Point Layer",
-              columns: {
-                lat: "latitude",
-                lng: "longitude",
-              },
-              isVisible: true,
-              visConfig: {
-                radius: 10,         // 🔹 Size of the points
-                opacity: 1,
-                colorRange: {
-                  name: "Custom",
-                  type: "custom",
-                  category: "Custom",
-                  colors: ["#ff6b00"],  // Highlight color
+        addDataToMap({
+          datasets: {
+            info: {
+              label: "Nearby POIs",
+              id: "pois",
+            },
+            data: keplerData,
+          },
+          options: {
+            centerMap: true,
+            readOnly: false,
+          },
+          config: {
+            visState: {
+              layers: [
+                {
+                  id: "pois-point-layer",
+                  type: "point",
+                  config: {
+                    dataId: "pois",
+                    label: "POIs Point Layer",
+                    columns: {
+                      lat: "latitude",
+                      lng: "longitude",
+                    },
+                    isVisible: true,
+                    visConfig: {
+                      radius: 10,
+                      opacity: 1,
+                      colorRange: {
+                        name: "Custom",
+                        type: "custom",
+                        category: "Custom",
+                        colors: ["#ff6b00"],
+                      },
+                      outline: false,
+                    },
+                  },
                 },
-                outline: false,
-              },
+              ],
             },
           },
-        ],
-      },
-    },
-  })
-);
-
+        })
+      );
     }
   }, [dispatch, data]);
 
-  return <Map />;
+  const handlePOIUpdate = (updatedPOI: any) => {
+    // Here you would typically make an API call to update the POI
+    console.log('POI updated:', updatedPOI);
+    
+    // You might want to refresh the data or update it locally
+    // For now, just log it
+    
+    // Example API call (uncomment and modify as needed):
+    // fetch(`http://127.0.0.1:8000/pois/${updatedPOI.id}`, {
+    //   method: 'PUT',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify(updatedPOI),
+    // });
+  };
+
+  const handleClosePOIDetails = () => {
+    setShowPOIDetails(false);
+  };
+
+  return (
+    <>
+      <Map />
+      {showPOIDetails && data && (
+        <POIDetails
+          poisData={data}
+          onUpdate={handlePOIUpdate}
+          onClose={handleClosePOIDetails}
+        />
+      )}
+    </>
+  );
 }
 
 export default function MapWrapper() {
