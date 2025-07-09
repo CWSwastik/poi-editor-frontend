@@ -6,6 +6,7 @@ import { Provider, useDispatch } from "react-redux";
 import store from "../store";
 import { addDataToMap } from "@kepler.gl/actions";
 import useSwr from "swr";
+import useFeatureClick from '../app/hooks/useFeatureClick';
 
 const Map: React.FC = () => (
   <div style={{ position: "absolute", width: "100%", height: "100%" }}>
@@ -15,6 +16,7 @@ const Map: React.FC = () => (
       getState={(state: any) => state.keplerGl}
       width={typeof window !== "undefined" ? window.innerWidth : 800}
       height={typeof window !== "undefined" ? window.innerHeight : 600}
+
     />
   </div>
 );
@@ -109,6 +111,8 @@ const transformToKeplerFormat = (data: any[]) => {
 
 function MapWithData({ lat, lng, radius }: { lat: number; lng: number; radius: number }) {
   const dispatch = useDispatch();
+
+  useFeatureClick();
 
   const { data } = useSwr(`pois-${lat}-${lng}-${radius}`, async () => {
     const response = await fetch(`http://127.0.0.1:8000/pois/nearby?lat=${lat}&lng=${lng}&radius_km=${radius}`);
