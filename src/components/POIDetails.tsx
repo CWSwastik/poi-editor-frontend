@@ -57,7 +57,7 @@ const POIDetails: React.FC<POIDetailsProps> = ({ poisData, onUpdate, onClose }) 
   const [activeTab, setActiveTab] = useState<'basic' | 'location' | 'analytics' | 'technical'>('basic');
 
   const clickedFeature = useSelector(
-    (state: RootState) => state.keplerGl.map?.visState?.clicked
+    (state: RootState) => state.keplerGl.map?.visState?.datasets.pois.dataContainer._rows
   );
 
   useEffect(() => {
