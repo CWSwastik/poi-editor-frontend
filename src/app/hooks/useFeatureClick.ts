@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 
 interface UseFeatureClickProps {
-  onFeatureClick?: (index: number) => void;
+  onFeatureClick?: (index: number, dataset: any) => void;
   showAlert?: boolean;
 }
 
@@ -12,24 +12,32 @@ const useFeatureClick = (props: UseFeatureClickProps = {}) => {
   const clickedFeature = useSelector(
     (state: RootState) => state.keplerGl.map?.visState?.clicked
   );
+  const dataset = useSelector(
+    (state: RootState) =>
+      state.keplerGl.map?.visState?.datasets?.pois?.dataContainer
+  );
 
   useEffect(() => {
-    console.log("useEffect triggered, clickedFeature:", clickedFeature);
-    
+    console.log(
+      "useEffect triggered, clickedFeature:",
+      clickedFeature,
+      dataset
+    );
+
     if (clickedFeature) {
       console.log("clickedFeature exists:", clickedFeature);
-      
+
       // The index is directly on the clickedFeature object, not nested in picked.object
       const { index } = clickedFeature;
       console.log("POI index:", index);
-      
+
       if (showAlert) {
         alert(`Index: ${index}`);
       }
-      
+
       // Call the callback function if provided
       if (onFeatureClick) {
-        onFeatureClick(index);
+        onFeatureClick(index, dataset);
       }
     } else {
       console.log("No clickedFeature");
@@ -38,7 +46,7 @@ const useFeatureClick = (props: UseFeatureClickProps = {}) => {
 
   return {
     clickedFeature,
-    clickedIndex: clickedFeature?.index || null
+    clickedIndex: clickedFeature?.index || null,
   };
 };
 
