@@ -160,7 +160,7 @@ function MapWithData({
 
   const { data } = useSwr(`pois-${lat}-${lng}-${radius}`, async () => {
     const response = await fetch(
-      `http://127.0.0.1:8000/pois/nearby?lat=${lat}&lng=${lng}&radius_km=${radius}`
+      `http://127.0.0.1:8000/pois/nearby?lat=${lat}&lng=${lng}&h3_disk_radius=${radius}`
     );
     return await response.json();
   });
@@ -258,7 +258,7 @@ function MapWithData({
 export default function MapWrapper() {
   const [latStr, setLatStr] = React.useState("0");
   const [lngStr, setLngStr] = React.useState("0");
-  const [radiusStr, setRadiusStr] = React.useState("0");
+  const [radiusStr, setRadiusStr] = React.useState("1");
 
   const [lat, setLat] = React.useState(0);
   const [lng, setLng] = React.useState(0);
