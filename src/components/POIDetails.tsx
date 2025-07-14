@@ -7,19 +7,102 @@ interface POIDetailsProps {
   onClose: () => void;
 }
 
+interface ImageData {
+  id: number;
+  image_base64: string;
+  filename?: string;
+  upload_date?: string;
+}
+
 const POIDetails: React.FC<POIDetailsProps> = ({ poi, onUpdate, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedPOI, setEditedPOI] = useState<POIData>(poi);
   const [openSection, setOpenSection] = useState<string | null>("basic");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Photo-related state
+  const [images, setImages] = useState<ImageData[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     setEditedPOI(poi);
     setIsEditing(false);
     setOpenSection("basic");
     setError(null);
+    // Load images when POI changes
+    loadImages();
   }, [poi]);
+
+  const loadImages = async () => {
+    setIsLoadingImages(true);
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/pois/${poi.id}/images`);
+      if (response.ok) {
+        const imageData = await response.json();
+        setImages(imageData);
+      } else {
+        console.error('Failed to load images');
+        setImages([]);
+      }
+    } catch (err) {
+      console.error('Error loading images:', err);
+      setImages([]);
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      for (const file of files) {
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+          setUploadError('Please select only image files');
+          continue;
+        }
+
+        // Check file size (optional, e.g., 5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+          setUploadError('File size must be less than 5MB');
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`http://127.0.0.1:8000/pois/${poi.id}/upload_image`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to upload ${file.name}: ${errorText}`);
+        }
+      }
+
+      // Reload images after successful upload
+      await loadImages();
+      
+      // Clear the file input
+      event.target.value = '';
+      
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to upload image');
+      console.error('Error uploading image:', err);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const toggleSection = (section: string) => {
     setOpenSection(prev => (prev === section ? null : section));
@@ -171,6 +254,90 @@ const POIDetails: React.FC<POIDetailsProps> = ({ poi, onUpdate, onClose }) => {
     );
   };
 
+  const renderPhotosSection = () => {
+    return (
+      <div className="mb-4 border border-gray-600 rounded">
+        <button
+          onClick={() => toggleSection("photos")}
+          className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 font-semibold flex justify-between items-center text-gray-100"
+        >
+          <span>Photos ({images.length})</span>
+          <span>{openSection === "photos" ? "▲" : "▼"}</span>
+        </button>
+        {openSection === "photos" && (
+          <div className="p-4 bg-gray-800">
+            {/* Upload Section */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Upload Images
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                disabled={isUploading}
+                className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              />
+              {isUploading && (
+                <p className="text-blue-400 text-sm mt-2">Uploading...</p>
+              )}
+              {uploadError && (
+                <p className="text-red-400 text-sm mt-2">{uploadError}</p>
+              )}
+            </div>
+
+            {/* Images Display */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-300 mb-3">
+                Current Images
+              </h4>
+              {isLoadingImages ? (
+                <p className="text-gray-400">Loading images...</p>
+              ) : images.length === 0 ? (
+                <p className="text-gray-400">No images uploaded yet.</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {images.map((image, index) => (
+                    <div key={image.id || index} className="relative group">
+                      <img
+                        src={image.image_base64}
+                        crossOrigin="anonymous"
+                        alt={image.filename || `Image ${index + 1}`}
+                        className="max-w-full max-h-full"
+                      />
+                      <div className="absolute inset-ring-zinc-1 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded-lg flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 text-white text-sm text-center px-2">
+                          {image.filename && (
+                            <p className="truncate">{image.filename}</p>
+                          )}
+                          {image.upload_date && (
+                            <p className="text-xs text-gray-300">
+                              {new Date(image.upload_date).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Refresh Button */}
+            <button
+              onClick={loadImages}
+              disabled={isLoadingImages}
+              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed"
+            >
+              {isLoadingImages ? "Loading..." : "Refresh Images"}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const sections: {
     title: string;
     key: string;
@@ -262,6 +429,10 @@ const POIDetails: React.FC<POIDetailsProps> = ({ poi, onUpdate, onClose }) => {
         </div>
       )}
 
+      {/* Photos Section - Added first */}
+      {renderPhotosSection()}
+
+      {/* Existing sections */}
       {sections.map((section) => (
         <div key={section.key} className="mb-4 border border-gray-600 rounded">
           <button
