@@ -264,6 +264,8 @@ export default function MapWrapper() {
   const [lng, setLng] = React.useState(0);
   const [radius, setRadius] = React.useState(0);
   const [submitted, setSubmitted] = React.useState(false);
+  const [locationError, setLocationError] = React.useState("");
+  const [isGettingLocation, setIsGettingLocation] = React.useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,6 +282,55 @@ export default function MapWrapper() {
     }
   };
 
+  const getCurrentLocation = () => {
+    setIsGettingLocation(true);
+    setLocationError("");
+
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by this browser");
+      setIsGettingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLatStr(latitude.toFixed(6));
+        setLngStr(longitude.toFixed(6));
+        setIsGettingLocation(false);
+        
+        // Optionally auto-submit with current location
+        // setLat(latitude);
+        // setLng(longitude);
+        // setRadius(parseInt(radiusStr));
+        // setSubmitted(true);
+      },
+      (error) => {
+        let errorMessage = "Unable to get your location";
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location access denied by user";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information unavailable";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out";
+            break;
+        }
+        
+        setLocationError(errorMessage);
+        setIsGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000 // Cache location for 1 minute
+      }
+    );
+  };
+
   return (
     <Provider store={store}>
       <form
@@ -292,38 +343,58 @@ export default function MapWrapper() {
           padding: "8px",
           borderRadius: "8px",
           zIndex: 1000,
+          minWidth: "300px"
         }}
       >
-        <input
-          type="text"
-          className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
-          placeholder="Lat"
-          value={latStr}
-          onChange={(e) => setLatStr(e.target.value)}
-        />
+        <div style={{ marginBottom: "8px" }}>
+          <input
+            type="text"
+            className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
+            placeholder="Lat"
+            value={latStr}
+            onChange={(e) => setLatStr(e.target.value)}
+          />
 
-        <input
-          type="text"
-          className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
-          placeholder="Long"
-          value={lngStr}
-          onChange={(e) => setLngStr(e.target.value)}
-        />
+          <input
+            type="text"
+            className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
+            placeholder="Long"
+            value={lngStr}
+            onChange={(e) => setLngStr(e.target.value)}
+          />
 
-        <input
-          type="text"
-          className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
-          placeholder="Radius (km)"
-          value={radiusStr}
-          onChange={(e) => setRadiusStr(e.target.value)}
-        />
+          <input
+            type="text"
+            className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
+            placeholder="Radius (km)"
+            value={radiusStr}
+            onChange={(e) => setRadiusStr(e.target.value)}
+          />
+        </div>
 
-        <button
-          type="submit"
-          className="px-4 py-1 bg-white text-black rounded hover:bg-blue-700"
-        >
-          Update Map
-        </button>
+        <div style={{ marginBottom: "8px" }}>
+          <button
+            type="button"
+            onClick={getCurrentLocation}
+            disabled={isGettingLocation}
+            className="px-3 py-1 mr-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 text-sm"
+          >
+            {isGettingLocation ? "Getting Location..." : "📍 Use My Location"}
+          </button>
+
+          <button
+            type="submit"
+            className="px-4 py-1 bg-white text-black rounded hover:bg-blue-700"
+          >
+            Update Map
+          </button>
+        </div>
+
+        {locationError && (
+          <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>
+            {locationError}
+          </div>
+        )}
       </form>
 
       {submitted && <MapWithData lat={lat} lng={lng} radius={radius} />}
