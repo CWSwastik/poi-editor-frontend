@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { POIData } from "@/types/POIData";
 
 interface POIDetailsProps {
@@ -20,6 +20,7 @@ const POIDetails: React.FC<POIDetailsProps> = ({ poi, onUpdate, onClose }) => {
   const [openSection, setOpenSection] = useState<string | null>("basic");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   // Photo-related state
   const [images, setImages] = useState<ImageData[]>([]);
@@ -32,6 +33,7 @@ const POIDetails: React.FC<POIDetailsProps> = ({ poi, onUpdate, onClose }) => {
     setIsEditing(false);
     setOpenSection("basic");
     setError(null);
+    setHasUnsavedChanges(false);
     // Load images when POI changes
     loadImages();
   }, [poi]);
@@ -162,6 +164,26 @@ const POIDetails: React.FC<POIDetailsProps> = ({ poi, onUpdate, onClose }) => {
     };
   };
 
+  // Removed debounced save - using manual save instead
+
+  const handleCancel = () => {
+    setEditedPOI(poi);
+    setIsEditing(false);
+    setError(null);
+    setHasUnsavedChanges(false);
+    // Reset the parent component back to original POI data
+    onUpdate(poi);
+  };
+
+  const handleInputChange = (field: keyof POIData, value: string | number) => {
+    const updatedPOI = { ...editedPOI, [field]: value };
+    setEditedPOI(updatedPOI);
+    setHasUnsavedChanges(true);
+    
+    // Immediately update the parent component for UI reflection
+    onUpdate(updatedPOI);
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     setError(null);
@@ -185,8 +207,9 @@ const POIDetails: React.FC<POIDetailsProps> = ({ poi, onUpdate, onClose }) => {
       const updatedData = await response.json();
       
       // Update the local state with the response data
+      setEditedPOI(updatedData);
       onUpdate(updatedData);
-      setIsEditing(false);
+      setHasUnsavedChanges(false);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while saving');
@@ -194,16 +217,6 @@ const POIDetails: React.FC<POIDetailsProps> = ({ poi, onUpdate, onClose }) => {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleCancel = () => {
-    setEditedPOI(poi);
-    setIsEditing(false);
-    setError(null);
-  };
-
-  const handleInputChange = (field: keyof POIData, value: string | number) => {
-    setEditedPOI((prev) => ({ ...prev, [field]: value }));
   };
 
   const renderField = (
@@ -422,10 +435,21 @@ const POIDetails: React.FC<POIDetailsProps> = ({ poi, onUpdate, onClose }) => {
         </button>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-600 text-white rounded-lg">
-          <p className="font-medium">Error saving POI:</p>
-          <p className="text-sm">{error}</p>
+      {/* Status indicators */}
+      {isEditing && (
+        <div className="mb-4 flex items-center space-x-4">
+          {hasUnsavedChanges && (
+            <div className="flex items-center text-yellow-400 text-sm">
+              <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
+              Unsaved changes
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center text-red-400 text-sm">
+              <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+              Error: {error}
+            </div>
+          )}
         </div>
       )}
 
