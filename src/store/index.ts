@@ -4,15 +4,32 @@ import { taskMiddleware } from "react-palm/tasks";
 import { createLogger } from "redux-logger";
 import { KeplerGlState } from "@kepler.gl/reducers";
 
-const rootReducer = combineReducers({ 
-  keplerGl: keplerGlReducer 
+/* initial state */
+const rootReducer = combineReducers({
+  keplerGl: keplerGlReducer.initialState({
+    uiState: {
+      activeSidePanel: null,
+      currentModal: null,
+      readOnly: false,
+      mapControls: {
+        visibleLayers: { show: false },
+        mapLegend: { show: false },
+        toggle3d: { show: false },
+        splitMap: { show: false },
+      },
+    },
+  }),
 });
 
 const logger = createLogger({
-  collapsed: true, 
+  collapsed: true,
 });
 
-const store = createStore(rootReducer, {}, applyMiddleware(taskMiddleware, logger));
+const store = createStore(
+  rootReducer,
+  {},
+  applyMiddleware(taskMiddleware, logger)
+);
 
 export interface RootState {
   keplerGl: KeplerGlState;

@@ -11,7 +11,10 @@ import POIDetails from "./POIDetails"; // Add this import
 import { POIData } from "@/types/POIData";
 
 const Map: React.FC = () => (
-  <div style={{ position: "absolute", width: "100%", height: "100%" }}>
+  <div
+    className="overflow-hidden"
+    style={{ position: "absolute", width: "100%", height: "100%" }}
+  >
     <KeplerGl
       id="map"
       mapboxApiAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN!}
@@ -160,7 +163,12 @@ function MapWithData({
 
   const { data } = useSwr(`pois-${lat}-${lng}-${radius}`, async () => {
     const response = await fetch(
-      `http://127.0.0.1:8000/pois/nearby?lat=${lat}&lng=${lng}&h3_disk_radius=${radius}`
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/pois/nearby?lat=${lat}&lng=${lng}&h3_disk_radius=${radius}`,
+      {
+        headers: {
+          "Ngrok-Skip-Browser-Warning": "1",
+        },
+      }
     );
     return await response.json();
   });
@@ -181,6 +189,7 @@ function MapWithData({
             centerMap: true,
             readOnly: false,
           },
+
           config: {
             visState: {
               layers: [
@@ -209,6 +218,14 @@ function MapWithData({
                   },
                 },
               ],
+              interactionConfig: {
+                tooltip: {
+                  enabled: false,
+                  fieldsToShow: {},
+                  compareMode: false,
+                  compareType: "absolute",
+                },
+              },
             },
           },
         })
@@ -219,18 +236,6 @@ function MapWithData({
   const handlePOIUpdate = (updatedPOI: any) => {
     // Here you would typically make an API call to update the POI
     console.log("POI updated:", updatedPOI);
-
-    // You might want to refresh the data or update it locally
-    // For now, just log it
-
-    // Example API call (uncomment and modify as needed):
-    // fetch(`http://127.0.0.1:8000/pois/${updatedPOI.id}`, {
-    //   method: 'PUT',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify(updatedPOI),
-    // });
   };
 
   const handleClosePOIDetails = () => {
@@ -242,7 +247,7 @@ function MapWithData({
       <Map />
 
       {showPOIDetails && clickedPOIData && (
-        <div className="absolute top-25 right-5 w-80 max-h-[80vh] overflow-y-auto bg-white/30 backdrop-blur-sm shadow-lg rounded-2xl z-50">
+        <div className="">
           {" "}
           <POIDetails
             poi={clickedPOIData}
@@ -298,7 +303,7 @@ export default function MapWrapper() {
         setLatStr(latitude.toFixed(6));
         setLngStr(longitude.toFixed(6));
         setIsGettingLocation(false);
-        
+
         // Optionally auto-submit with current location
         // setLat(latitude);
         // setLng(longitude);
@@ -307,7 +312,7 @@ export default function MapWrapper() {
       },
       (error) => {
         let errorMessage = "Unable to get your location";
-        
+
         switch (error.code) {
           case error.PERMISSION_DENIED:
             errorMessage = "Location access denied by user";
@@ -319,14 +324,14 @@ export default function MapWrapper() {
             errorMessage = "Location request timed out";
             break;
         }
-        
+
         setLocationError(errorMessage);
         setIsGettingLocation(false);
       },
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 60000 // Cache location for 1 minute
+        maximumAge: 60000, // Cache location for 1 minute
       }
     );
   };
@@ -335,21 +340,12 @@ export default function MapWrapper() {
     <Provider store={store}>
       <form
         onSubmit={handleSubmit}
-        style={{
-          position: "absolute",
-          top: 13,
-          left: 1000,
-          background: "black",
-          padding: "8px",
-          borderRadius: "8px",
-          zIndex: 1000,
-          minWidth: "300px"
-        }}
+        className="fixed top-4 right-4 z-50 bg-black text-white p-4 rounded-lg min-w-[300px] max-w-[90vw]"
       >
-        <div style={{ marginBottom: "8px" }}>
+        <div className="mb-2 flex flex-wrap gap-2">
           <input
             type="text"
-            className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
+            className="px-2 py-1 text-black border border-gray-400 rounded w-20 bg-white"
             placeholder="Lat"
             value={latStr}
             onChange={(e) => setLatStr(e.target.value)}
@@ -357,7 +353,7 @@ export default function MapWrapper() {
 
           <input
             type="text"
-            className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
+            className="px-2 py-1 text-black border border-gray-400 rounded w-20 bg-white"
             placeholder="Long"
             value={lngStr}
             onChange={(e) => setLngStr(e.target.value)}
@@ -365,19 +361,19 @@ export default function MapWrapper() {
 
           <input
             type="text"
-            className="px-2 py-1 mr-2 text-black border border-gray-400 rounded w-20 bg-white"
+            className="px-2 py-1 text-black border border-gray-400 rounded w-24 bg-white"
             placeholder="Radius (km)"
             value={radiusStr}
             onChange={(e) => setRadiusStr(e.target.value)}
           />
         </div>
 
-        <div style={{ marginBottom: "8px" }}>
+        <div className="mb-2 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={getCurrentLocation}
             disabled={isGettingLocation}
-            className="px-3 py-1 mr-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 text-sm"
+            className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 text-sm"
           >
             {isGettingLocation ? "Getting Location..." : "📍 Use My Location"}
           </button>
@@ -391,9 +387,7 @@ export default function MapWrapper() {
         </div>
 
         {locationError && (
-          <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>
-            {locationError}
-          </div>
+          <div className="text-red-500 text-xs mt-1">{locationError}</div>
         )}
       </form>
 
