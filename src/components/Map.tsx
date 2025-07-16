@@ -4,10 +4,10 @@ import React, { useState, useCallback } from "react";
 import KeplerGl from "@kepler.gl/components";
 import { Provider, useDispatch } from "react-redux";
 import store from "../store";
-import { addDataToMap } from "@kepler.gl/actions";
+import { addDataToMap, updateMap } from "@kepler.gl/actions";
 import useSwr from "swr";
 import useFeatureClick from "../app/hooks/useFeatureClick";
-import POIDetails from "./POIDetails"; // Add this import
+import POIDetails from "./POIDetails";
 import { POIData } from "@/types/POIData";
 
 const Map: React.FC = () => (
@@ -176,6 +176,7 @@ function MapWithData({
   React.useEffect(() => {
     if (data) {
       const keplerData = transformToKeplerFormat(data);
+      console.log("new kepler data", keplerData);
       dispatch(
         addDataToMap({
           datasets: {
@@ -232,6 +233,17 @@ function MapWithData({
       );
     }
   }, [dispatch, data]);
+
+  React.useEffect(() => {
+    if (data) {
+      dispatch(
+        updateMap({
+          longitude: lng,
+          latitude: lat,
+        })
+      );
+    }
+  }, [dispatch, data, lat, lng]);
 
   const handlePOIUpdate = (updatedPOI: any) => {
     // Here you would typically make an API call to update the POI
